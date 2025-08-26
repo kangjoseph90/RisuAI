@@ -373,26 +373,43 @@ export async function runScripted(code:string, arg:{
             })
 
             declareAPI('getCharacterImageInlayMain', async (id:string) => {
-                const db = getDatabase()
-                const selectedChar = get(selectedCharID)
-                const character = db.characters[selectedChar]
-                
-                if (!character || character.type === 'group') {
-                    return null
-                }
-                
-                if (!character.image) {
-                    return null
-                }
-                
                 try {
+                    const db = getDatabase()
+                    const selectedChar = get(selectedCharID)
+                    
+                    if (selectedChar < 0 || selectedChar >= db.characters.length) {
+                        console.warn('Invalid character selection for image inlay')
+                        return null
+                    }
+                    
+                    const character = db.characters[selectedChar]
+                    
+                    if (!character) {
+                        console.warn('Character not found for image inlay')
+                        return null
+                    }
+                    
+                    if (character.type === 'group') {
+                        console.warn('Cannot get image inlay for group characters')
+                        return null
+                    }
+                    
+                    if (!character.image) {
+                        console.warn('Character has no image for inlay conversion')
+                        return null
+                    }
+                    
                     const inlayId = await writeCharacterImageAsInlay(character.image)
                     if (inlayId) {
-                        return `{{inlayed::${inlayId}}}`
+                        const result = `{{inlayed::${inlayId}}}`
+                        console.log('Character image inlay created:', result)
+                        return result
                     }
+                    
+                    console.warn('Failed to create character image inlay')
                     return null
                 } catch (error) {
-                    console.error('Error creating character image inlay:', error)
+                    console.error('Error in getCharacterImageInlayMain:', error)
                     return null
                 }
             })

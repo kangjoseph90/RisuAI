@@ -171,31 +171,33 @@ export async function writeCharacterImageAsInlay(imageData: string): Promise<str
     }
     
     try {
-        // Check if it's already a data URI
-        if (imageData.startsWith('data:')) {
-            const imgObj = new Image()
-            imgObj.src = imageData
-            const inlayId = await writeInlayImage(imgObj)
-            return inlayId
-        }
-        
-        // If it's a base64 string without data URI prefix, add it
-        if (!imageData.startsWith('http')) {
-            const imgObj = new Image()
-            imgObj.src = `data:image/png;base64,${imageData}`
-            const inlayId = await writeInlayImage(imgObj)
-            return inlayId
-        }
-        
-        // If it's a URL, create image element and convert
         const imgObj = new Image()
         imgObj.crossOrigin = 'anonymous'
-        imgObj.src = imageData
+        
+        // Create a promise to wait for image loading
         await new Promise((resolve, reject) => {
             imgObj.onload = resolve
             imgObj.onerror = reject
+            
+            // Check if it's already a data URI
+            if (imageData.startsWith('data:')) {
+                imgObj.src = imageData
+            }
+            // If it's a base64 string without data URI prefix, add it
+            else if (!imageData.startsWith('http')) {
+                imgObj.src = `data:image/png;base64,${imageData}`
+            }
+            // If it's a URL, set it directly
+            else {
+                imgObj.src = imageData
+            }
         })
-        const inlayId = await writeInlayImage(imgObj)
+        
+        // Generate a meaningful name for the character image
+        const inlayId = await writeInlayImage(imgObj, {
+            name: 'character_icon',
+            ext: 'png'
+        })
         return inlayId
     } catch (error) {
         console.error('Error converting character image to inlay:', error)
