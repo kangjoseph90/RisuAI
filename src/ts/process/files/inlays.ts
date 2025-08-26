@@ -164,3 +164,41 @@ export async function reencodeImage(img:Uint8Array){
     const b = Buffer.from(b64, 'base64')
     return b
 }
+
+export async function writeCharacterImageAsInlay(imageData: string): Promise<string | null> {
+    if (!imageData) {
+        return null
+    }
+    
+    try {
+        // Check if it's already a data URI
+        if (imageData.startsWith('data:')) {
+            const imgObj = new Image()
+            imgObj.src = imageData
+            const inlayId = await writeInlayImage(imgObj)
+            return inlayId
+        }
+        
+        // If it's a base64 string without data URI prefix, add it
+        if (!imageData.startsWith('http')) {
+            const imgObj = new Image()
+            imgObj.src = `data:image/png;base64,${imageData}`
+            const inlayId = await writeInlayImage(imgObj)
+            return inlayId
+        }
+        
+        // If it's a URL, create image element and convert
+        const imgObj = new Image()
+        imgObj.crossOrigin = 'anonymous'
+        imgObj.src = imageData
+        await new Promise((resolve, reject) => {
+            imgObj.onload = resolve
+            imgObj.onerror = reject
+        })
+        const inlayId = await writeInlayImage(imgObj)
+        return inlayId
+    } catch (error) {
+        console.error('Error converting character image to inlay:', error)
+        return null
+    }
+}

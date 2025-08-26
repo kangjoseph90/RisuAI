@@ -6,7 +6,7 @@ import { ReloadChatPointer, ReloadGUIPointer, selectedCharID } from "../stores.s
 import { alertSelect, alertError, alertInput, alertNormal, alertConfirm } from "../alert";
 import { HypaProcesser } from "./memory/hypamemory";
 import { generateAIImage } from "./stableDiff";
-import { writeInlayImage } from "./files/inlays";
+import { writeInlayImage, writeCharacterImageAsInlay } from "./files/inlays";
 import type { OpenAIChat } from "./index.svelte";
 import { requestChatData } from "./request/request";
 import { v4 } from "uuid";
@@ -370,6 +370,31 @@ export async function runScripted(code:string, arg:{
                 imgHTML.src = gen
                 const inlay = await writeInlayImage(imgHTML)
                 return `{{inlay::${inlay}}}`
+            })
+
+            declareAPI('getCharacterImageInlayMain', async (id:string) => {
+                const db = getDatabase()
+                const selectedChar = get(selectedCharID)
+                const character = db.characters[selectedChar]
+                
+                if (!character || character.type === 'group') {
+                    return null
+                }
+                
+                if (!character.image) {
+                    return null
+                }
+                
+                try {
+                    const inlayId = await writeCharacterImageAsInlay(character.image)
+                    if (inlayId) {
+                        return `{{inlayed::${inlayId}}}`
+                    }
+                    return null
+                } catch (error) {
+                    console.error('Error creating character image inlay:', error)
+                    return null
+                }
             })
 
             declareAPI('hash', async (id:string, value:string) => {
@@ -1043,6 +1068,10 @@ end
 
 function axLLM(id, prompt)
     return json.decode(axLLMMain(id, json.encode(prompt)):await())
+end
+
+function getCharacterImageInlay(id)
+    return getCharacterImageInlayMain(id):await()
 end
 
 local editRequestFuncs = {}
