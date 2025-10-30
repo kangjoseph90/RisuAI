@@ -4,7 +4,7 @@
     import { alertConfirm } from "src/ts/alert";
 
     import { DBState } from "src/ts/stores.svelte";
-    import { importPlugin } from "src/ts/plugins/plugins";
+    import { importPlugin, unloadPlugin } from "src/ts/plugins/plugins";
     import TextInput from "src/lib/UI/GUI/TextInput.svelte";
     import NumberInput from "src/lib/UI/GUI/NumberInput.svelte";
     import SelectInput from "src/lib/UI/GUI/SelectInput.svelte";
@@ -55,6 +55,9 @@
                             (plugin.displayName ?? plugin.name),
                     );
                     if (v) {
+                        // Unload the plugin before removing it
+                        await unloadPlugin(plugin.name);
+                        
                         if (DBState.db.currentPluginProvider === plugin.name) {
                             DBState.db.currentPluginProvider = "";
                         }

@@ -207,15 +207,27 @@ export const pluginV2 = {
     editinput: new Set<EditFunction>(),
     replacerbeforeRequest: new Set<ReplacerFunction>(),
     replacerafterRequest: new Set<(content: string, type: string) => string | Promise<string>>(),
-    unload: new Set<() => void | Promise<void>>(),
+    unload: new Map<string, Set<() => void | Promise<void>>>(),
     loaded: false
+}
+
+export async function unloadPlugin(pluginName: string) {
+    const unloadCallbacks = pluginV2.unload.get(pluginName)
+    if (unloadCallbacks) {
+        for (const unload of unloadCallbacks) {
+            await unload()
+        }
+        pluginV2.unload.delete(pluginName)
+    }
 }
 
 export async function loadV2Plugin(plugins: RisuPlugin[]) {
 
     if (pluginV2.loaded) {
-        for (const unload of pluginV2.unload) {
-            await unload()
+        for (const [pluginName, unloadCallbacks] of pluginV2.unload) {
+            for (const unload of unloadCallbacks) {
+                await unload()
+            }
         }
 
         pluginV2.providers.clear()
@@ -223,9 +235,12 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
         pluginV2.editoutput.clear()
         pluginV2.editprocess.clear()
         pluginV2.editinput.clear()
+        pluginV2.unload.clear()
     }
 
     pluginV2.loaded = true
+
+    let currentPluginName = ''
 
     globalThis.__pluginApis__ = {
         risuFetch: globalFetch,
@@ -288,7 +303,13 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
             }
         },
         onUnload: (func: () => void | Promise<void>) => {
-            pluginV2.unload.add(func)
+            if (!currentPluginName) {
+                throw new Error('onUnload called outside of plugin context')
+            }
+            if (!pluginV2.unload.has(currentPluginName)) {
+                pluginV2.unload.set(currentPluginName, new Set())
+            }
+            pluginV2.unload.get(currentPluginName)!.add(func)
         },
         setArg: (arg: string, value: string | number) => {
             const db = getDatabase();
@@ -302,6 +323,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
     }
 
     for (const plugin of plugins) {
+        currentPluginName = plugin.name
         const data = plugin.script
 
         const realScript = `(async () => {
@@ -329,6 +351,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
         }
 
         console.log('Loaded V2 Plugin', plugin.name)
+        currentPluginName = ''
 
     }
 }
