@@ -56,7 +56,7 @@
                     );
                     if (v) {
                         // Unload the plugin before removing it
-                        await unloadPlugin(plugin.name);
+                        await unloadPlugin(i);
                         
                         if (DBState.db.currentPluginProvider === plugin.name) {
                             DBState.db.currentPluginProvider = "";
