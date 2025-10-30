@@ -240,7 +240,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
 
     pluginV2.loaded = true
 
-    let currentPluginName = ''
+    let currentPluginName: string | null = null
 
     globalThis.__pluginApis__ = {
         risuFetch: globalFetch,
@@ -304,7 +304,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
         },
         onUnload: (func: () => void | Promise<void>) => {
             if (!currentPluginName) {
-                throw new Error('onUnload called outside of plugin context')
+                throw new Error('onUnload must be called during plugin initialization, not outside of plugin context')
             }
             if (!pluginV2.unload.has(currentPluginName)) {
                 pluginV2.unload.set(currentPluginName, new Set())
@@ -351,7 +351,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
         }
 
         console.log('Loaded V2 Plugin', plugin.name)
-        currentPluginName = ''
+        currentPluginName = null
 
     }
 }
