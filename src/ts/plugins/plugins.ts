@@ -207,24 +207,29 @@ export const pluginV2 = {
     editinput: new Set<EditFunction>(),
     replacerbeforeRequest: new Set<ReplacerFunction>(),
     replacerafterRequest: new Set<(content: string, type: string) => string | Promise<string>>(),
-    unload: new Map<number, Set<() => void | Promise<void>>>(),
+    unload: new Map<string, Set<() => void | Promise<void>>>(),
     loaded: false
 }
 
-export async function unloadPlugin(pluginIndex: number) {
-    const unloadCallbacks = pluginV2.unload.get(pluginIndex)
+let pluginLoadIdCounter = 0
+
+export async function unloadPlugin(plugin: RisuPlugin & { _loadId?: string }) {
+    if (!plugin._loadId) {
+        return
+    }
+    const unloadCallbacks = pluginV2.unload.get(plugin._loadId)
     if (unloadCallbacks) {
         for (const unload of unloadCallbacks) {
             await unload()
         }
-        pluginV2.unload.delete(pluginIndex)
+        pluginV2.unload.delete(plugin._loadId)
     }
 }
 
 export async function loadV2Plugin(plugins: RisuPlugin[]) {
 
     if (pluginV2.loaded) {
-        for (const [pluginIndex, unloadCallbacks] of pluginV2.unload) {
+        for (const [loadId, unloadCallbacks] of pluginV2.unload) {
             for (const unload of unloadCallbacks) {
                 await unload()
             }
@@ -240,7 +245,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
 
     pluginV2.loaded = true
 
-    let currentPluginIndex: number | null = null
+    let currentPluginLoadId: string | null = null
 
     globalThis.__pluginApis__ = {
         risuFetch: globalFetch,
@@ -303,13 +308,13 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
             }
         },
         onUnload: (func: () => void | Promise<void>) => {
-            if (currentPluginIndex === null) {
+            if (currentPluginLoadId === null) {
                 throw new Error('onUnload must be called during plugin initialization, not outside of plugin context')
             }
-            if (!pluginV2.unload.has(currentPluginIndex)) {
-                pluginV2.unload.set(currentPluginIndex, new Set())
+            if (!pluginV2.unload.has(currentPluginLoadId)) {
+                pluginV2.unload.set(currentPluginLoadId, new Set())
             }
-            pluginV2.unload.get(currentPluginIndex)!.add(func)
+            pluginV2.unload.get(currentPluginLoadId)!.add(func)
         },
         setArg: (arg: string, value: string | number) => {
             const db = getDatabase();
@@ -323,8 +328,11 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
     }
 
     for (let i = 0; i < plugins.length; i++) {
-        const plugin = plugins[i]
-        currentPluginIndex = i
+        const plugin = plugins[i] as RisuPlugin & { _loadId?: string }
+        // Generate a unique load ID for this plugin instance
+        const loadId = `plugin_${Date.now()}_${pluginLoadIdCounter++}`
+        plugin._loadId = loadId
+        currentPluginLoadId = loadId
         const data = plugin.script
 
         const realScript = `(async () => {
@@ -352,7 +360,7 @@ export async function loadV2Plugin(plugins: RisuPlugin[]) {
         }
 
         console.log('Loaded V2 Plugin', plugin.name)
-        currentPluginIndex = null
+        currentPluginLoadId = null
 
     }
 }
