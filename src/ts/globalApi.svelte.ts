@@ -483,6 +483,11 @@ export async function saveDb(){
                         const patchResult = await forageStorage.patchItem('database/database.bin', patchData);
                         saved = patchResult.success
                         if (saved && patchResult.newHash) {
+                            // patcher state is already updated in patcher.set()
+                            const localNewHash = patcher.hash();
+                            if(localNewHash !== patchResult.newHash){
+                                console.warn(`[RisuAI] Hash drift detected (Local: ${localNewHash}, Server: ${patchResult.newHash}). Syncing to server hash to maintain consistency.`);
+                            }
                             patcher.syncHash(patchResult.newHash);
                         }
                     }
