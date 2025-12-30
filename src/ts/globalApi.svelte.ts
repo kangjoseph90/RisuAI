@@ -480,7 +480,11 @@ export async function saveDb(){
                     let saved = false
                     if (supportsPatchSync) {
                         const patchData = await patcher.set(db, safeStructuredClone(toSave))
-                        saved = await forageStorage.patchItem('database/database.bin', patchData);
+                        const patchResult = await forageStorage.patchItem('database/database.bin', patchData);
+                        saved = patchResult.success
+                        if (saved && patchResult.newHash) {
+                            patcher.syncHash(patchResult.newHash);
+                        }
                     }
                     if (!saved) {
                         await forageStorage.setItem('database/database.bin', dbData);

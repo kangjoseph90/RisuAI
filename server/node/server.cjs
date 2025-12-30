@@ -506,6 +506,9 @@ app.post('/api/patch', async (req, res, next) => {
         // Apply patch to in-memory database
         const result = applyPatch(dbCache[filePath], patch, true);
 
+        // Calculate NEW hash after patch
+        const newServerHash = calculateHash(dbCache[filePath]).toString(16);
+
         // Schedule save to disk (debounced)
         if (saveTimers[filePath]) {
             clearTimeout(saveTimers[filePath]);
@@ -539,6 +542,7 @@ app.post('/api/patch', async (req, res, next) => {
         res.send({
             success: true,
             appliedOperations: result.length,
+            newHash: newServerHash
         });
     } catch (error) {
         console.error(`[Patch] Error applying patch to ${filePath}:`, error.name);

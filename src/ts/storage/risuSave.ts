@@ -534,6 +534,7 @@ function normalizeJSON(value: any): any {
 export class RisuSavePatcher {
     private lastSyncedDb: any;
     private hashBlocks: { [key: string]: number } = {};
+    private lastServerHash: string = '';
 
     hash(): string {
         
@@ -551,6 +552,10 @@ export class RisuSavePatcher {
         return (rootHash >>> 0).toString(16);
     }
 
+    syncHash(newHash: string) {
+        this.lastServerHash = newHash;
+    }
+
     async init(data: any) {
         this.lastSyncedDb = normalizeJSON(data);
         this.hashBlocks = {};
@@ -566,10 +571,11 @@ export class RisuSavePatcher {
         for(const character of this.lastSyncedDb.characters) {
             this.hashBlocks[character.chaId] = calculateHash(character);
         }
+        this.lastServerHash = this.hash();
     }
 
     async set(data: any, toSave: toSaveType): Promise<{ patch: any[]; expectedHash: string }> {
-        const expectedHash: string = this.hash();
+        const expectedHash: string = this.lastServerHash || this.hash();
         const patch: any[] = []
 
         const { 

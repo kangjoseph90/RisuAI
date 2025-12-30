@@ -79,7 +79,7 @@ export class NodeStorage{
         }
     }
 
-    async patchItem(key: string, patchData: {patch: any[], expectedHash: string}): Promise<boolean> {
+    async patchItem(key: string, patchData: {patch: any[], expectedHash: string}): Promise<{success: boolean, newHash?: string}> {
         await this.checkAuth()
         
         const da = await fetch('/api/patch', {
@@ -93,13 +93,13 @@ export class NodeStorage{
         })
         
         if(da.status < 200 || da.status >= 300){
-            return false
+            return { success: false }
         }
         const data = await da.json()
         if(data.error){
-            return false
+            return { success: false }
         }
-        return true
+        return { success: true, newHash: data.newHash }
     }
 
     private async checkAuth(){
