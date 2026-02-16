@@ -575,6 +575,7 @@ export const getV2PluginAPIs = () => {
                 'TextDecoder',
                 'URL',
                 'URLSearchParams',
+                'performance',
             ]
             for (const key of keys) {
                 if(allowedKeys.includes(key)){
@@ -607,6 +608,14 @@ export const getV2PluginAPIs = () => {
             safeGlobal.clearTimeout = (...args: any[]) => {
                 //@ts-expect-error spreading any[] into clearTimeout - first arg should be number | undefined
                 return globalThis.clearTimeout(...args);
+            }
+            safeGlobal.requestAnimationFrame = (...args: any[]) => {
+                //@ts-expect-error spreading any[] into requestAnimationFrame - first arg should be FrameRequestCallback
+                return globalThis.requestAnimationFrame(...args);
+            }
+            safeGlobal.cancelAnimationFrame = (...args: any[]) => {
+                //@ts-expect-error spreading any[] into cancelAnimationFrame - first arg should be number
+                return globalThis.cancelAnimationFrame(...args);
             }
             safeGlobal.alert = globalThis.alert;
             safeGlobal.confirm = globalThis.confirm;
